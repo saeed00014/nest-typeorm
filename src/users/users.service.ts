@@ -1,8 +1,15 @@
+import { HttpService } from '@nestjs/axios';
+import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Queue } from 'bullmq';
 import { Cache } from 'cache-manager';
+import { firstValueFrom } from 'rxjs';
+import { CostumLogger } from 'src/costumLogger/costumLogger';
 import { ResponseUser, User } from 'src/entity/user.entity';
+import { orderCreatedEvent } from 'src/events/orderEvent';
 import { DataSource, Repository } from 'typeorm';
 
 @Injectable()
@@ -12,6 +19,10 @@ export class UsersService {
     private dataSource: DataSource,
     @Inject('CACHE_MANAGER') private cache: Cache,
     private schedulerRegistry: SchedulerRegistry,
+    // @InjectQueue('firstQueue') private firstQueue: Queue,
+    @Inject(CostumLogger) private costumLogger: CostumLogger,
+    private eventEmitter: EventEmitter2,
+    private httpService: HttpService,
   ) {}
 
   async getAllUsers() {
@@ -28,8 +39,18 @@ export class UsersService {
   }
 
   async getUser(id: Number) {
-    const result = await this.userRepository.findOneBy({ id });
-    return result;
+    // return this.httpService.axiosRef.get('http://localhost:3000/cats');
+    const { data } = await firstValueFrom(
+      this.httpService.get('http://localhost:3000/users'),
+    );
+    console.log(data);
+    this.eventEmitter.emit('order', 'its payload');
+    // const result = await this.userRepository.findOneBy({ id });
+    // return result;
+  }
+
+  postFile(files: Express.Multer.File[]) {
+    console.log(files);
   }
 
   async createUser(user: User) {
